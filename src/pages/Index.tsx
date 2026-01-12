@@ -3,6 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import Icon from '@/components/ui/icon';
 import {
   LineChart,
@@ -64,6 +70,14 @@ const performanceData = [
 export default function Index() {
   const [priceData, setPriceData] = useState(generatePriceData());
   const [currentPrice, setCurrentPrice] = useState(43280.45);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [strategyName, setStrategyName] = useState('');
+  const [tradingPair, setTradingPair] = useState('BTC/USDT');
+  const [strategyType, setStrategyType] = useState('scalping');
+  const [riskLevel, setRiskLevel] = useState([50]);
+  const [useStopLoss, setUseStopLoss] = useState(true);
+  const [useTakeProfit, setUseTakeProfit] = useState(true);
+  const [selectedIndicators, setSelectedIndicators] = useState<string[]>(['rsi', 'macd']);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -101,7 +115,7 @@ export default function Index() {
             <p className="text-sm text-muted-foreground">Баланс портфеля</p>
             <p className="text-2xl font-bold font-mono">$124,567.89</p>
           </div>
-          <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+          <Button size="lg" className="bg-gradient-to-r from-primary to-secondary hover:opacity-90" onClick={() => setIsDialogOpen(true)}>
             <Icon name="Plus" size={20} className="mr-2" />
             Новая стратегия
           </Button>
@@ -411,6 +425,168 @@ export default function Index() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="glass-panel max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold gradient-text">Создать новую стратегию</DialogTitle>
+            <DialogDescription>
+              Настройте параметры торговой стратегии и выберите технические индикаторы
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="strategy-name" className="text-sm font-semibold">
+                Название стратегии
+              </Label>
+              <Input
+                id="strategy-name"
+                placeholder="Например: Scalping BTC Daily"
+                value={strategyName}
+                onChange={(e) => setStrategyName(e.target.value)}
+                className="glass-panel border-border/50"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="trading-pair" className="text-sm font-semibold">
+                  Торговая пара
+                </Label>
+                <Select value={tradingPair} onValueChange={setTradingPair}>
+                  <SelectTrigger id="trading-pair" className="glass-panel border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel">
+                    <SelectItem value="BTC/USDT">BTC/USDT</SelectItem>
+                    <SelectItem value="ETH/USDT">ETH/USDT</SelectItem>
+                    <SelectItem value="SOL/USDT">SOL/USDT</SelectItem>
+                    <SelectItem value="BNB/USDT">BNB/USDT</SelectItem>
+                    <SelectItem value="ADA/USDT">ADA/USDT</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="strategy-type" className="text-sm font-semibold">
+                  Тип стратегии
+                </Label>
+                <Select value={strategyType} onValueChange={setStrategyType}>
+                  <SelectTrigger id="strategy-type" className="glass-panel border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="glass-panel">
+                    <SelectItem value="scalping">Скальпинг</SelectItem>
+                    <SelectItem value="trend">Трендовая</SelectItem>
+                    <SelectItem value="grid">Сеточная</SelectItem>
+                    <SelectItem value="dca">DCA (усреднение)</SelectItem>
+                    <SelectItem value="arbitrage">Арбитраж</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Уровень риска</Label>
+                <Badge className="bg-primary/20 text-primary border-primary/50">
+                  {riskLevel[0]}%
+                </Badge>
+              </div>
+              <Slider
+                value={riskLevel}
+                onValueChange={setRiskLevel}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Низкий риск</span>
+                <span>Средний риск</span>
+                <span>Высокий риск</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Технические индикаторы</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: 'rsi', name: 'RSI', icon: 'TrendingUp' },
+                  { id: 'macd', name: 'MACD', icon: 'Activity' },
+                  { id: 'ema', name: 'EMA', icon: 'LineChart' },
+                  { id: 'bollinger', name: 'Bollinger Bands', icon: 'BarChart3' },
+                  { id: 'volume', name: 'Volume Profile', icon: 'BarChart2' },
+                  { id: 'fibonacci', name: 'Fibonacci', icon: 'Layers' },
+                ].map((indicator) => (
+                  <button
+                    key={indicator.id}
+                    onClick={() =>
+                      setSelectedIndicators((prev) =>
+                        prev.includes(indicator.id)
+                          ? prev.filter((i) => i !== indicator.id)
+                          : [...prev, indicator.id]
+                      )
+                    }
+                    className={`p-3 rounded-lg border transition-all ${
+                      selectedIndicators.includes(indicator.id)
+                        ? 'bg-primary/20 border-primary text-primary'
+                        : 'glass-panel border-border/50 hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon name={indicator.icon as any} size={18} />
+                      <span className="text-sm font-medium">{indicator.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Управление рисками</Label>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg glass-panel">
+                  <div className="flex items-center gap-3">
+                    <Icon name="ShieldAlert" size={20} className="text-destructive" />
+                    <div>
+                      <p className="text-sm font-medium">Stop Loss</p>
+                      <p className="text-xs text-muted-foreground">Автоматическая остановка убытков</p>
+                    </div>
+                  </div>
+                  <Switch checked={useStopLoss} onCheckedChange={setUseStopLoss} />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg glass-panel">
+                  <div className="flex items-center gap-3">
+                    <Icon name="Target" size={20} className="text-secondary" />
+                    <div>
+                      <p className="text-sm font-medium">Take Profit</p>
+                      <p className="text-xs text-muted-foreground">Фиксация прибыли при достижении цели</p>
+                    </div>
+                  </div>
+                  <Switch checked={useTakeProfit} onCheckedChange={setUseTakeProfit} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-border/50">
+              Отмена
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+              onClick={() => {
+                setIsDialogOpen(false);
+              }}
+            >
+              <Icon name="Rocket" size={18} className="mr-2" />
+              Запустить стратегию
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

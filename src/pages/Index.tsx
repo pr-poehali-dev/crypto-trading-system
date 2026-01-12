@@ -67,6 +67,36 @@ const performanceData = [
   { month: 'Июн', profit: 9.7, trades: 58 },
 ];
 
+const generateBacktestData = () => {
+  const data = [];
+  let equity = 10000;
+  let drawdown = 0;
+  for (let i = 0; i < 90; i++) {
+    const change = (Math.random() - 0.45) * 300;
+    equity += change;
+    const currentDrawdown = Math.max(0, (Math.max(...data.map(d => d.equity || 10000), 10000) - equity) / 10000 * 100);
+    drawdown = Math.max(drawdown, currentDrawdown);
+    data.push({
+      day: i + 1,
+      equity: Math.round(equity),
+      drawdown: currentDrawdown.toFixed(2),
+      trades: Math.floor(Math.random() * 5),
+    });
+  }
+  return data;
+};
+
+const backtestResults = {
+  totalReturn: 34.5,
+  sharpeRatio: 2.13,
+  maxDrawdown: 8.7,
+  winRate: 68.3,
+  totalTrades: 287,
+  profitFactor: 2.45,
+  avgWin: 245,
+  avgLoss: 120,
+};
+
 export default function Index() {
   const [priceData, setPriceData] = useState(generatePriceData());
   const [currentPrice, setCurrentPrice] = useState(43280.45);
@@ -78,6 +108,17 @@ export default function Index() {
   const [useStopLoss, setUseStopLoss] = useState(true);
   const [useTakeProfit, setUseTakeProfit] = useState(true);
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>(['rsi', 'macd']);
+  const [backtestData, setBacktestData] = useState(generateBacktestData());
+  const [isBacktesting, setIsBacktesting] = useState(false);
+  const [backtestPeriod, setBacktestPeriod] = useState('90');
+
+  const runBacktest = () => {
+    setIsBacktesting(true);
+    setTimeout(() => {
+      setBacktestData(generateBacktestData());
+      setIsBacktesting(false);
+    }, 2000);
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -279,6 +320,10 @@ export default function Index() {
             <Icon name="Target" size={16} className="mr-2" />
             Позиции
           </TabsTrigger>
+          <TabsTrigger value="backtest" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+            <Icon name="FlaskConical" size={16} className="mr-2" />
+            Бэктестинг
+          </TabsTrigger>
           <TabsTrigger value="analytics" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
             <Icon name="LineChart" size={16} className="mr-2" />
             Аналитика
@@ -373,6 +418,222 @@ export default function Index() {
               </CardContent>
             </Card>
           ))}
+        </TabsContent>
+
+        <TabsContent value="backtest" className="space-y-6">
+          <Card className="glass-panel">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Тестирование стратегии</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Проверьте эффективность стратегии на исторических данных
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Select value={backtestPeriod} onValueChange={setBacktestPeriod}>
+                    <SelectTrigger className="w-32 glass-panel border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass-panel">
+                      <SelectItem value="30">30 дней</SelectItem>
+                      <SelectItem value="90">90 дней</SelectItem>
+                      <SelectItem value="180">180 дней</SelectItem>
+                      <SelectItem value="365">1 год</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={runBacktest}
+                    disabled={isBacktesting}
+                    className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                  >
+                    {isBacktesting ? (
+                      <>
+                        <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                        Тестирование...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="Play" size={18} className="mr-2" />
+                        Запустить тест
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="p-4 rounded-lg glass-panel">
+                  <p className="text-xs text-muted-foreground mb-1">Общая доходность</p>
+                  <p className="text-2xl font-bold font-mono text-secondary">+{backtestResults.totalReturn}%</p>
+                </div>
+                <div className="p-4 rounded-lg glass-panel">
+                  <p className="text-xs text-muted-foreground mb-1">Коэфф. Шарпа</p>
+                  <p className="text-2xl font-bold font-mono">{backtestResults.sharpeRatio}</p>
+                </div>
+                <div className="p-4 rounded-lg glass-panel">
+                  <p className="text-xs text-muted-foreground mb-1">Макс. просадка</p>
+                  <p className="text-2xl font-bold font-mono text-destructive">-{backtestResults.maxDrawdown}%</p>
+                </div>
+                <div className="p-4 rounded-lg glass-panel">
+                  <p className="text-xs text-muted-foreground mb-1">Win Rate</p>
+                  <p className="text-2xl font-bold font-mono text-primary">{backtestResults.winRate}%</p>
+                </div>
+              </div>
+
+              <ResponsiveContainer width="100%" height={350}>
+                <AreaChart data={backtestData}>
+                  <defs>
+                    <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--secondary))" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="hsl(var(--secondary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="equity"
+                    stroke="hsl(var(--secondary))"
+                    strokeWidth={3}
+                    fill="url(#colorEquity)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="glass-panel">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon name="TrendingUp" size={20} />
+                  Статистика сделок
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Icon name="Hash" size={18} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Всего сделок</p>
+                      <p className="text-lg font-bold font-mono">{backtestResults.totalTrades}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
+                      <Icon name="TrendingUp" size={18} className="text-secondary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Средняя прибыль</p>
+                      <p className="text-lg font-bold font-mono text-secondary">${backtestResults.avgWin}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-destructive/20 flex items-center justify-center">
+                      <Icon name="TrendingDown" size={18} className="text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Средний убыток</p>
+                      <p className="text-lg font-bold font-mono text-destructive">-${backtestResults.avgLoss}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Icon name="Award" size={18} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Profit Factor</p>
+                      <p className="text-lg font-bold font-mono">{backtestResults.profitFactor}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-panel">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon name="BarChart2" size={20} />
+                  Распределение сделок
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Прибыльные сделки</span>
+                      <span className="text-sm font-semibold text-secondary">{backtestResults.winRate}%</span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-secondary to-primary rounded-full transition-all"
+                        style={{ width: `${backtestResults.winRate}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Убыточные сделки</span>
+                      <span className="text-sm font-semibold text-destructive">
+                        {(100 - backtestResults.winRate).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-destructive rounded-full transition-all"
+                        style={{ width: `${100 - backtestResults.winRate}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 p-4 rounded-lg glass-panel border-primary/30">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Sparkles" size={24} className="text-primary" />
+                      <div>
+                        <p className="font-semibold">Отличные результаты!</p>
+                        <p className="text-xs text-muted-foreground">
+                          Стратегия показала стабильную доходность с контролируемым риском
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <Button variant="outline" className="border-border/50">
+                      <Icon name="Download" size={16} className="mr-2" />
+                      Экспорт
+                    </Button>
+                    <Button variant="outline" className="border-border/50">
+                      <Icon name="Share2" size={16} className="mr-2" />
+                      Поделиться
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="analytics">
